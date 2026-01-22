@@ -1,11 +1,25 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import KnowledgeHeader from "@/components/KnowledgeHeader";
+import KnowledgeSidebar from "@/components/KnowledgeSidebar";
+import KnowledgeContent from "@/components/KnowledgeContent";
 
 const Index = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSection, setActiveSection] = useState("all");
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background flex flex-col">
+      <KnowledgeHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      
+      <div className="flex flex-1">
+        <KnowledgeSidebar 
+          activeSection={activeSection} 
+          onSectionChange={setActiveSection} 
+        />
+        <KnowledgeContent 
+          activeSection={activeSection} 
+          searchQuery={searchQuery} 
+        />
       </div>
     </div>
   );
