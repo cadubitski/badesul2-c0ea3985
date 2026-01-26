@@ -14,16 +14,157 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["admin_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categorias: {
+        Row: {
+          ativo: boolean | null
+          created_at: string
+          descricao: string | null
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      configuracoes_gerais: {
+        Row: {
+          chave: string
+          created_at: string
+          descricao: string | null
+          id: string
+          updated_at: string
+          valor: string
+        }
+        Insert: {
+          chave: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+          valor: string
+        }
+        Update: {
+          chave?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string
+          valor?: string
+        }
+        Relationships: []
+      }
+      itens_rotinas: {
+        Row: {
+          ativo: boolean | null
+          categoria_id: string
+          created_at: string
+          descricao: string | null
+          icone: string | null
+          id: string
+          link: string | null
+          nome: string
+          ordem: number | null
+          prompt_instrucao: string | null
+          tipo: Database["public"]["Enums"]["item_tipo"] | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria_id: string
+          created_at?: string
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          link?: string | null
+          nome: string
+          ordem?: number | null
+          prompt_instrucao?: string | null
+          tipo?: Database["public"]["Enums"]["item_tipo"] | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria_id?: string
+          created_at?: string
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          link?: string | null
+          nome?: string
+          ordem?: number | null
+          prompt_instrucao?: string | null
+          tipo?: Database["public"]["Enums"]["item_tipo"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_rotinas_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_admin_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["admin_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      admin_role: "super_admin" | "admin" | "editor"
+      item_tipo: "link" | "faq" | "dashboard" | "manual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +291,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      admin_role: ["super_admin", "admin", "editor"],
+      item_tipo: ["link", "faq", "dashboard", "manual"],
+    },
   },
 } as const

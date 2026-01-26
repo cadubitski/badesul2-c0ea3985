@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useConfiguracoes } from "@/hooks/usePortalData";
 
 interface KnowledgeHeaderProps {
   searchQuery: string;
@@ -7,16 +8,29 @@ interface KnowledgeHeaderProps {
 }
 
 const KnowledgeHeader = ({ searchQuery, onSearchChange }: KnowledgeHeaderProps) => {
+  const { data: config } = useConfiguracoes();
+  
+  // Usar configurações do banco ou valores padrão
+  const corPrimaria = config?.corPrimaria || '#1e3a5f';
+  const corSecundaria = config?.corSecundaria || '#2e7d32';
+  const titulo = config?.tituloHeader || 'Banco de Conhecimento';
+  const subtitulo = config?.subtituloHeader || 'Badesul - Portal de Manuais e Procedimentos';
+
   return (
-    <header className="bg-gradient-to-r from-[hsl(210,100%,20%)] to-[hsl(150,100%,25%)] text-white py-6 px-8 shadow-lg">
+    <header 
+      className="text-white py-6 px-8 shadow-lg"
+      style={{
+        background: `linear-gradient(to right, ${corPrimaria}, ${corSecundaria})`
+      }}
+    >
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-              Banco de Conhecimento
+              {titulo}
             </h1>
             <p className="text-white/80 text-sm mt-1">
-              Badesul - Portal de Manuais e Procedimentos
+              {subtitulo}
             </p>
           </div>
           
