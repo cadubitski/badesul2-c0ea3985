@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Loader2, Plus, Pencil, Trash2, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import IconPicker, { getIconComponent } from "@/components/IconPicker";
 
 const AdminCategoriasTab = () => {
   const { data: categorias, isLoading } = useCategorias(true); // incluir inativos
@@ -125,39 +126,43 @@ const AdminCategoriasTab = () => {
       </div>
       
       <div className="space-y-2">
-        {categorias?.map((categoria) => (
-          <Card key={categoria.id} className={!categoria.ativo ? "opacity-60" : ""}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                <div>
-                  <p className="font-medium">{categoria.nome}</p>
-                  <p className="text-sm text-muted-foreground">{categoria.descricao}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 mr-4">
-                  <Label htmlFor={`ativo-${categoria.id}`} className="text-sm text-muted-foreground">
-                    Ativo
-                  </Label>
-                  <Switch
-                    id={`ativo-${categoria.id}`}
-                    checked={categoria.ativo}
-                    onCheckedChange={() => handleToggleAtivo(categoria)}
-                  />
+        {categorias?.map((categoria) => {
+          const IconComponent = getIconComponent(categoria.icone);
+          return (
+            <Card key={categoria.id} className={!categoria.ativo ? "opacity-60" : ""}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                  <IconComponent className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{categoria.nome}</p>
+                    <p className="text-sm text-muted-foreground">{categoria.descricao}</p>
+                  </div>
                 </div>
                 
-                <Button variant="outline" size="sm" onClick={() => handleEdit(categoria)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setDeleteId(categoria.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mr-4">
+                    <Label htmlFor={`ativo-${categoria.id}`} className="text-sm text-muted-foreground">
+                      Ativo
+                    </Label>
+                    <Switch
+                      id={`ativo-${categoria.id}`}
+                      checked={categoria.ativo}
+                      onCheckedChange={() => handleToggleAtivo(categoria)}
+                    />
+                  </div>
+                  
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(categoria)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setDeleteId(categoria.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
         
         {(!categorias || categorias.length === 0) && (
           <p className="text-center text-muted-foreground py-8">
@@ -199,11 +204,9 @@ const AdminCategoriasTab = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="icone">Ícone</Label>
-                <Input
-                  id="icone"
+                <IconPicker
                   value={formData.icone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, icone: e.target.value }))}
-                  placeholder="book-open, link-2, folder..."
+                  onChange={(value) => setFormData(prev => ({ ...prev, icone: value }))}
                 />
               </div>
               

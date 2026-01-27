@@ -26,6 +26,18 @@ const AdminLoginModal = ({ isOpen, onClose, onSuccess }: AdminLoginModalProps) =
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Limpar campos sempre que o modal abrir
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setEmail("");
+      setPassword("");
+      setError(null);
+    }
+    if (!open) {
+      onClose();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -64,15 +76,8 @@ const AdminLoginModal = ({ isOpen, onClose, onSuccess }: AdminLoginModalProps) =
     }
   };
 
-  const handleClose = () => {
-    setEmail("");
-    setPassword("");
-    setError(null);
-    onClose();
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -90,28 +95,33 @@ const AdminLoginModal = ({ isOpen, onClose, onSuccess }: AdminLoginModalProps) =
           )}
           
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="admin-email">Email</Label>
             <Input
-              id="email"
+              id="admin-email"
+              name="admin-email-field"
               type="email"
               placeholder="admin@badesul.com.br"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              autoComplete="email"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="admin-password">Senha</Label>
             <Input
-              id="password"
+              id="admin-password"
+              name="admin-password-field"
               type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              autoComplete="current-password"
+              autoComplete="new-password"
             />
           </div>
           

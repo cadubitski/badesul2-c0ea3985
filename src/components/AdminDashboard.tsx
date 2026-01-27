@@ -3,10 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, Palette, FolderTree, FileText } from "lucide-react";
+import { LogOut, Palette, FolderTree, FileText, Users } from "lucide-react";
 import AdminVisualTab from "./admin/AdminVisualTab";
 import AdminCategoriasTab from "./admin/AdminCategoriasTab";
 import AdminItensTab from "./admin/AdminItensTab";
+import AdminUsersTab from "./admin/AdminUsersTab";
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ const AdminDashboard = ({ isOpen, onClose }: AdminDashboardProps) => {
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
             <TabsTrigger value="visual" className="flex items-center gap-2">
               <Palette className="h-4 w-4" />
               Visual
@@ -53,6 +54,10 @@ const AdminDashboard = ({ isOpen, onClose }: AdminDashboardProps) => {
             <TabsTrigger value="itens" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Rotinas e Itens
+            </TabsTrigger>
+            <TabsTrigger value="usuarios" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Usuários
             </TabsTrigger>
           </TabsList>
           
@@ -67,6 +72,10 @@ const AdminDashboard = ({ isOpen, onClose }: AdminDashboardProps) => {
             
             <TabsContent value="itens" className="m-0 h-full">
               <AdminItensTab />
+            </TabsContent>
+            
+            <TabsContent value="usuarios" className="m-0 h-full">
+              <AdminUsersTab />
             </TabsContent>
           </div>
         </Tabs>

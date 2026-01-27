@@ -1,6 +1,8 @@
+import { useNavigate } from "react-router-dom";
 import { ExternalLink, HelpCircle, Bot, Headphones, Monitor, FileText, BookOpen, Link2, BarChart3, LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConfiguracoes } from "@/hooks/usePortalData";
+import { getIconComponent } from "@/components/IconPicker";
 
 interface KnowledgeCardProps {
   title: string;
@@ -8,25 +10,14 @@ interface KnowledgeCardProps {
   iconName: string;
   href: string;
   categoryId: string;
+  itemId: string;
+  tipo: string;
 }
 
-// Mapear nomes de ícones para componentes Lucide
-const iconMap: Record<string, LucideIcon> = {
-  'help-circle': HelpCircle,
-  'bot': Bot,
-  'headphones': Headphones,
-  'monitor': Monitor,
-  'file': FileText,
-  'file-text': FileText,
-  'book-open': BookOpen,
-  'link-2': Link2,
-  'bar-chart-3': BarChart3,
-  'folder': BookOpen,
-};
-
-const KnowledgeCard = ({ title, description, iconName, href, categoryId }: KnowledgeCardProps) => {
+const KnowledgeCard = ({ title, description, iconName, href, categoryId, itemId, tipo }: KnowledgeCardProps) => {
   const { data: config } = useConfiguracoes();
-  const Icon = iconMap[iconName] || FileText;
+  const navigate = useNavigate();
+  const Icon = getIconComponent(iconName);
   
   // Usar cores do banco para os cards
   const corPrimaria = config?.corPrimaria || '#1e3a5f';
@@ -35,8 +26,23 @@ const KnowledgeCard = ({ title, description, iconName, href, categoryId }: Knowl
   // Alternar cores baseado na categoria (simplificado)
   const isFirstCategory = categoryId === 'manuais' || categoryId.includes('manuais');
 
+  const handleClick = (e: React.MouseEvent) => {
+    // Se for do tipo dashboard, abrir página interna
+    if (tipo === 'dashboard') {
+      e.preventDefault();
+      navigate(`/dashboard/${itemId}`);
+    }
+    // Para outros tipos, deixar o link padrão funcionar
+  };
+
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="block group">
+    <a 
+      href={tipo === 'dashboard' ? '#' : href} 
+      target={tipo === 'dashboard' ? undefined : "_blank"} 
+      rel={tipo === 'dashboard' ? undefined : "noopener noreferrer"} 
+      className="block group"
+      onClick={handleClick}
+    >
       <Card className="h-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-white">
         <CardHeader className="pb-3">
           <div 
@@ -49,7 +55,12 @@ const KnowledgeCard = ({ title, description, iconName, href, categoryId }: Knowl
           </div>
           <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
             {title}
-            <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+            {tipo !== 'dashboard' && (
+              <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            {tipo === 'dashboard' && (
+              <BarChart3 className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
