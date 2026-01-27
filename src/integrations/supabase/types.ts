@@ -95,6 +95,41 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_data: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          item_id: string
+          row_index: number
+          sheet_name: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          item_id: string
+          row_index: number
+          sheet_name: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          item_id?: string
+          row_index?: number
+          sheet_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_data_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "itens_rotinas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itens_rotinas: {
         Row: {
           ativo: boolean | null

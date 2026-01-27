@@ -69,6 +69,8 @@ const KnowledgeContent = ({ activeSection, searchQuery }: KnowledgeContentProps)
                       iconName={item.icone}
                       href={item.link || "#"}
                       categoryId={item.categoria_id}
+                      itemId={item.id}
+                      tipo={item.tipo}
                     />
                   ))}
                 </div>

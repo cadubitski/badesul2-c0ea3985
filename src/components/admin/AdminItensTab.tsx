@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useItensRotinas, useCategorias, useItemMutations } from "@/hooks/usePortalData";
 import { ItemRotina, ItemTipo } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import IconPicker, { getIconComponent } from "@/components/IconPicker";
+import ExcelUploader from "@/components/ExcelUploader";
 
 const tipoLabels: Record<ItemTipo, string> = {
   link: "Link",
@@ -41,6 +43,23 @@ const AdminItensTab = () => {
     ativo: true,
     prompt_instrucao: "",
   });
+
+  // Ordenar itens por categoria
+  const sortedItens = useMemo(() => {
+    if (!itens || !categorias) return itens || [];
+    
+    return [...itens].sort((a, b) => {
+      const catA = categorias.find(c => c.id === a.categoria_id);
+      const catB = categorias.find(c => c.id === b.categoria_id);
+      const ordemCatA = catA?.ordem ?? 999;
+      const ordemCatB = catB?.ordem ?? 999;
+      
+      if (ordemCatA !== ordemCatB) {
+        return ordemCatA - ordemCatB;
+      }
+      return a.ordem - b.ordem;
+    });
+  }, [itens, categorias]);
 
   const handleNew = () => {
     setEditingItem(null);
@@ -144,6 +163,12 @@ const AdminItensTab = () => {
     );
   }
 
+  // Agrupar itens por categoria para exibição
+  const itensByCategoria = categorias?.map(cat => ({
+    categoria: cat,
+    itens: sortedItens.filter(item => item.categoria_id === cat.id)
+  })).filter(group => group.itens.length > 0) || [];
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -154,57 +179,65 @@ const AdminItensTab = () => {
         </Button>
       </div>
       
-      <div className="space-y-2 max-h-[400px] overflow-y-auto">
-        {itens?.map((item) => (
-          <Card key={item.id} className={!item.ativo ? "opacity-60" : ""}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium">{item.nome}</p>
-                  <Badge variant="outline" className="text-xs">
-                    {tipoLabels[item.tipo]}
-                  </Badge>
-                  {item.categoria && (
-                    <Badge variant="secondary" className="text-xs">
-                      {item.categoria.nome}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground">{item.descricao}</p>
-                {item.link && (
-                  <a
-                    href={item.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    {item.link.substring(0, 50)}...
-                  </a>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 mr-4">
-                  <Label htmlFor={`ativo-${item.id}`} className="text-sm text-muted-foreground">
-                    Ativo
-                  </Label>
-                  <Switch
-                    id={`ativo-${item.id}`}
-                    checked={item.ativo}
-                    onCheckedChange={() => handleToggleAtivo(item)}
-                  />
-                </div>
-                
-                <Button variant="outline" size="sm" onClick={() => handleEdit(item)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setDeleteId(item.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="space-y-4 max-h-[400px] overflow-y-auto">
+        {itensByCategoria.map(({ categoria, itens: catItens }) => (
+          <div key={categoria.id} className="space-y-2">
+            <h4 className="text-sm font-semibold text-muted-foreground px-2 py-1 bg-muted/50 rounded">
+              {categoria.nome}
+            </h4>
+            {catItens.map((item) => {
+              const IconComponent = getIconComponent(item.icone);
+              return (
+                <Card key={item.id} className={!item.ativo ? "opacity-60" : ""}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex-1 flex items-start gap-3">
+                      <IconComponent className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{item.nome}</p>
+                          <Badge variant="outline" className="text-xs">
+                            {tipoLabels[item.tipo]}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{item.descricao}</p>
+                        {item.link && (
+                          <a
+                            href={item.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            {item.link.substring(0, 50)}...
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mr-4">
+                        <Label htmlFor={`ativo-${item.id}`} className="text-sm text-muted-foreground">
+                          Ativo
+                        </Label>
+                        <Switch
+                          id={`ativo-${item.id}`}
+                          checked={item.ativo}
+                          onCheckedChange={() => handleToggleAtivo(item)}
+                        />
+                      </div>
+                      
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(item)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setDeleteId(item.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         ))}
         
         {(!itens || itens.length === 0) && (
@@ -296,11 +329,9 @@ const AdminItensTab = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="icone">Ícone</Label>
-                <Input
-                  id="icone"
+                <IconPicker
                   value={formData.icone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, icone: e.target.value }))}
-                  placeholder="help-circle, bot, monitor..."
+                  onChange={(value) => setFormData(prev => ({ ...prev, icone: value }))}
                 />
               </div>
               
@@ -316,21 +347,32 @@ const AdminItensTab = () => {
             </div>
             
             {formData.tipo === "dashboard" && (
-              <div className="space-y-2">
-                <Label htmlFor="prompt_instrucao">
-                  Prompt de Instrução (para Dashboards)
-                </Label>
-                <Textarea
-                  id="prompt_instrucao"
-                  value={formData.prompt_instrucao}
-                  onChange={(e) => setFormData(prev => ({ ...prev, prompt_instrucao: e.target.value }))}
-                  placeholder="Instruções para renderização do dashboard..."
-                  rows={4}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Este campo será usado para interpretar e renderizar gráficos dinâmicos a partir do link.
-                </p>
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="prompt_instrucao">
+                    Prompt de Instrução (para Dashboards)
+                  </Label>
+                  <Textarea
+                    id="prompt_instrucao"
+                    value={formData.prompt_instrucao}
+                    onChange={(e) => setFormData(prev => ({ ...prev, prompt_instrucao: e.target.value }))}
+                    placeholder="Instruções para renderização do dashboard..."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este campo será usado para interpretar e renderizar gráficos dinâmicos a partir dos dados.
+                  </p>
+                </div>
+                
+                {editingItem && (
+                  <ExcelUploader 
+                    itemId={editingItem.id} 
+                    onUploadComplete={() => {
+                      toast({ title: "Dados do dashboard atualizados!" });
+                    }}
+                  />
+                )}
+              </>
             )}
             
             <div className="flex items-center gap-2">
