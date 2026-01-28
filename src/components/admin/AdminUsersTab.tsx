@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, UserCog, Mail } from "lucide-react";
+import { Loader2, Plus, Trash2, UserCog, Mail, Pencil, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AdminUser {
@@ -18,6 +18,7 @@ interface AdminUser {
   role: AdminRole;
   created_at: string;
   email?: string;
+  name?: string;
 }
 
 const roleLabels: Record<AdminRole, string> = {
@@ -32,23 +33,27 @@ const AdminUsersTab = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
     role: "editor" as AdminRole,
   });
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('admin_roles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Usar edge function para obter lista com email e nome
+      const { data, error } = await supabase.functions.invoke('manage-admin-user', {
+        body: { action: 'list' },
+      });
 
       if (error) throw error;
-      setUsers(data || []);
+      if (data.error) throw new Error(data.error);
+      
+      setUsers(data.users || []);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
       toast({
@@ -66,17 +71,65 @@ const AdminUsersTab = () => {
 
   const handleNew = () => {
     setFormData({
+      name: "",
       email: "",
       password: "",
       role: "editor",
     });
+    setEditingUser(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (user: AdminUser) => {
+    setFormData({
+      name: user.name || "",
+      email: "",
+      password: "",
+      role: user.role,
+    });
+    setEditingUser(user);
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
+    // Modo edição
+    if (editingUser) {
+      setSaving(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-admin-user', {
+          body: {
+            action: 'update',
+            userId: editingUser.user_id,
+            name: formData.name.trim(),
+            role: formData.role,
+            password: formData.password || undefined,
+          },
+        });
+
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        toast({ title: "Usuário atualizado com sucesso" });
+        setIsModalOpen(false);
+        setEditingUser(null);
+        fetchUsers();
+      } catch (error: any) {
+        console.error('Erro ao atualizar usuário:', error);
+        toast({
+          title: "Erro ao atualizar usuário",
+          description: error.message || "Tente novamente",
+          variant: "destructive",
+        });
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // Modo criação
     if (!formData.email || !formData.password) {
       toast({
-        title: "Preencha todos os campos",
+        title: "Preencha email e senha",
         variant: "destructive",
       });
       return;
@@ -92,10 +145,10 @@ const AdminUsersTab = () => {
 
     setSaving(true);
     try {
-      // Usar a edge function para criar o usuário
       const { data, error } = await supabase.functions.invoke('manage-admin-user', {
         body: {
           action: 'create',
+          name: formData.name.trim(),
           email: formData.email.trim(),
           password: formData.password,
           role: formData.role,
@@ -175,9 +228,17 @@ const AdminUsersTab = () => {
               <div className="flex items-center gap-4">
                 <UserCog className="h-8 w-8 text-muted-foreground" />
                 <div>
+                  {user.name && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">{user.name}</p>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <p className="font-medium">{user.user_id.substring(0, 8)}...</p>
+                    <p className={user.name ? "text-sm text-muted-foreground" : "font-medium"}>
+                      {user.email || `${user.user_id.substring(0, 8)}...`}
+                    </p>
                   </div>
                   <Badge variant="secondary" className="text-xs mt-1">
                     {roleLabels[user.role]}
@@ -186,6 +247,13 @@ const AdminUsersTab = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleEdit(user)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -206,33 +274,54 @@ const AdminUsersTab = () => {
         )}
       </div>
 
-      {/* Modal de Criação */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      {/* Modal de Criação/Edição */}
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        setIsModalOpen(open);
+        if (!open) setEditingUser(null);
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Novo Usuário Administrador</DialogTitle>
+            <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário Administrador'}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="name">Nome</Label>
               <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="usuario@badesul.com.br"
+                id="name"
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome do usuário"
+                autoComplete="off"
               />
             </div>
 
+            {!editingUser && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="usuario@badesul.com.br"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">
+                {editingUser ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}
+              </Label>
               <Input
                 id="password"
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="Mínimo 6 caracteres"
+                placeholder={editingUser ? "Deixe em branco para manter a atual" : "Mínimo 6 caracteres"}
+                autoComplete="new-password"
               />
             </div>
 
@@ -255,12 +344,15 @@ const AdminUsersTab = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsModalOpen(false);
+              setEditingUser(null);
+            }}>
               Cancelar
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Criar Usuário
+              {editingUser ? 'Salvar Alterações' : 'Criar Usuário'}
             </Button>
           </DialogFooter>
         </DialogContent>
