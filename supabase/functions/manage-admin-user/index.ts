@@ -3,13 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -20,21 +20,25 @@ serve(async (req) => {
     // Verificar autenticação do chamador
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
+      console.log('Authorization header missing or invalid');
       return new Response(
         JSON.stringify({ error: 'Não autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verificar se o chamador é um super_admin
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Criar cliente com o token do usuário
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const token = authHeader.replace('Bearer ', '');
+    // Validar o token usando getClaims
     const { data: claimsData, error: claimsError } = await supabaseClient.auth.getUser(token);
     
     if (claimsError || !claimsData.user) {
+      console.log('Token validation failed:', claimsError?.message);
       return new Response(
         JSON.stringify({ error: 'Token inválido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -42,6 +46,7 @@ serve(async (req) => {
     }
 
     const userId = claimsData.user.id;
+    console.log('Authenticated user:', userId);
 
     // Verificar role do chamador usando service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -52,14 +57,28 @@ serve(async (req) => {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (roleError || !roleData || roleData.role !== 'super_admin') {
+    console.log('Role check result:', roleData, roleError?.message);
+
+    if (roleError) {
+      console.error('Error checking role:', roleError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao verificar permissões' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!roleData || roleData.role !== 'super_admin') {
+      console.log('User is not super_admin:', roleData?.role);
       return new Response(
         JSON.stringify({ error: 'Apenas super_admin pode gerenciar usuários' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { action, email, password, role, userId: targetUserId } = await req.json();
+    const body = await req.json();
+    const { action, email, password, role, userId: targetUserId } = body;
+    
+    console.log('Action requested:', action, 'by user:', userId);
 
     if (action === 'create') {
       if (!email || !password) {
@@ -69,7 +88,9 @@ serve(async (req) => {
         );
       }
 
-      // Criar usuário
+      console.log('Creating user with email:', email);
+
+      // Criar usuário usando admin API
       const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -77,12 +98,14 @@ serve(async (req) => {
       });
 
       if (createError) {
-        console.error('Erro ao criar usuário:', createError);
+        console.error('Error creating user:', createError);
         return new Response(
           JSON.stringify({ error: createError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      console.log('User created:', userData.user.id);
 
       // Adicionar role
       const { error: roleInsertError } = await supabaseAdmin
@@ -93,16 +116,16 @@ serve(async (req) => {
         });
 
       if (roleInsertError) {
-        console.error('Erro ao adicionar role:', roleInsertError);
+        console.error('Error inserting role:', roleInsertError);
         // Tentar deletar o usuário criado
         await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
         return new Response(
-          JSON.stringify({ error: 'Erro ao configurar permissões' }),
+          JSON.stringify({ error: 'Erro ao configurar permissões: ' + roleInsertError.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log('Usuário admin criado:', email);
+      console.log('User admin created successfully:', email);
 
       return new Response(
         JSON.stringify({ 
@@ -130,6 +153,8 @@ serve(async (req) => {
         );
       }
 
+      console.log('Deleting user:', targetUserId);
+
       // Deletar role primeiro
       const { error: deleteRoleError } = await supabaseAdmin
         .from('admin_roles')
@@ -137,21 +162,21 @@ serve(async (req) => {
         .eq('user_id', targetUserId);
 
       if (deleteRoleError) {
-        console.error('Erro ao deletar role:', deleteRoleError);
+        console.error('Error deleting role:', deleteRoleError);
       }
 
       // Deletar usuário
       const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
 
       if (deleteUserError) {
-        console.error('Erro ao deletar usuário:', deleteUserError);
+        console.error('Error deleting user:', deleteUserError);
         return new Response(
           JSON.stringify({ error: deleteUserError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log('Usuário admin removido:', targetUserId);
+      console.log('User admin removed:', targetUserId);
 
       return new Response(
         JSON.stringify({ success: true, message: 'Usuário removido com sucesso' }),
@@ -165,9 +190,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro na função:', error);
+    console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ error: 'Erro interno do servidor: ' + (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
