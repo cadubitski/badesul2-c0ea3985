@@ -21,8 +21,17 @@ serve(async (req) => {
 
     const { email, password, setupKey } = await req.json();
 
-    // Chave de setup inicial para segurança (só permite setup uma vez)
-    const SETUP_KEY = 'badesul-setup-2024';
+    // Buscar chave de setup das variáveis de ambiente (Secret)
+    const SETUP_KEY = Deno.env.get('ADMIN_SETUP_KEY');
+    
+    // Verificar se a chave de setup está configurada
+    if (!SETUP_KEY) {
+      console.error('ADMIN_SETUP_KEY não está configurada nas variáveis de ambiente');
+      return new Response(
+        JSON.stringify({ error: 'Configuração de setup não encontrada. Configure ADMIN_SETUP_KEY nas variáveis de ambiente.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (setupKey !== SETUP_KEY) {
       return new Response(

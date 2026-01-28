@@ -34,7 +34,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Validar o token usando getClaims
+    // Validar o token usando getUser
     const { data: claimsData, error: claimsError } = await supabaseClient.auth.getUser(token);
     
     if (claimsError || !claimsData.user) {
@@ -76,7 +76,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, email, password, role, userId: targetUserId } = body;
+    const { action, email, password, role, name, userId: targetUserId } = body;
     
     console.log('Action requested:', action, 'by user:', userId);
 
@@ -90,11 +90,17 @@ serve(async (req) => {
 
       console.log('Creating user with email:', email);
 
-      // Criar usuário usando admin API
+      // Criar usuário usando admin API com metadata de nome
+      const userMetadata: Record<string, string> = {};
+      if (name) {
+        userMetadata.name = name;
+      }
+
       const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
+        user_metadata: userMetadata,
       });
 
       if (createError) {
@@ -133,6 +139,66 @@ serve(async (req) => {
           message: 'Usuário criado com sucesso',
           userId: userData.user.id 
         }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'update') {
+      if (!targetUserId) {
+        return new Response(
+          JSON.stringify({ error: 'ID do usuário é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Updating user:', targetUserId);
+
+      // Atualizar metadados do usuário (nome)
+      const updateData: Record<string, unknown> = {};
+      
+      if (name !== undefined) {
+        updateData.user_metadata = { name };
+      }
+      
+      if (password) {
+        updateData.password = password;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(
+          targetUserId,
+          updateData
+        );
+
+        if (updateUserError) {
+          console.error('Error updating user:', updateUserError);
+          return new Response(
+            JSON.stringify({ error: updateUserError.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      // Atualizar role se fornecido
+      if (role) {
+        const { error: roleUpdateError } = await supabaseAdmin
+          .from('admin_roles')
+          .update({ role })
+          .eq('user_id', targetUserId);
+
+        if (roleUpdateError) {
+          console.error('Error updating role:', roleUpdateError);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao atualizar permissões: ' + roleUpdateError.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      console.log('User updated successfully:', targetUserId);
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Usuário atualizado com sucesso' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -180,6 +246,39 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ success: true, message: 'Usuário removido com sucesso' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'list') {
+      // Buscar usuários com roles
+      const { data: rolesData, error: listError } = await supabaseAdmin
+        .from('admin_roles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (listError) {
+        console.error('Error listing users:', listError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao listar usuários' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Buscar dados dos usuários do auth
+      const usersWithDetails = await Promise.all(
+        (rolesData || []).map(async (roleRecord) => {
+          const { data: userData } = await supabaseAdmin.auth.admin.getUserById(roleRecord.user_id);
+          return {
+            ...roleRecord,
+            email: userData?.user?.email || null,
+            name: userData?.user?.user_metadata?.name || null,
+          };
+        })
+      );
+
+      return new Response(
+        JSON.stringify({ success: true, users: usersWithDetails }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
