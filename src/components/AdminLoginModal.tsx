@@ -86,7 +86,7 @@ const AdminLoginModal = ({ isOpen, onClose, onSuccess }: AdminLoginModalProps) =
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4" autoComplete="off">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -100,14 +100,16 @@ const AdminLoginModal = ({ isOpen, onClose, onSuccess }: AdminLoginModalProps) =
               id="admin-email"
               name="admin-email-field"
               type="email"
-              placeholder="admin@badesul.com.br"
+              placeholder="digite seu e-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              spellCheck="false"
+              spellCheck={false}
+              data-lpignore="true"
+              data-form-type="other"
             />
           </div>
           
@@ -117,11 +119,16 @@ const AdminLoginModal = ({ isOpen, onClose, onSuccess }: AdminLoginModalProps) =
               id="admin-password"
               name="admin-password-field"
               type="password"
-              placeholder="••••••••"
+              placeholder="digite sua senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              autoComplete="new-password"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-lpignore="true"
+              data-form-type="other"
             />
           </div>
           
