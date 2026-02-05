@@ -3,6 +3,7 @@ import { BookOpen, Link2, Headphones, Bot, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCategorias } from "@/hooks/usePortalData";
 import { useAuth } from "@/hooks/useAuth";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import AdminLoginModal from "./AdminLoginModal";
 
 interface KnowledgeSidebarProps {
@@ -21,9 +22,20 @@ const iconMap: Record<string, React.ElementType> = {
 const KnowledgeSidebar = ({ activeSection, onSectionChange, onOpenAdmin }: KnowledgeSidebarProps) => {
   const { data: categorias, isLoading } = useCategorias();
   const { isAdmin } = useAuth();
+  const { trackCategoryClick, trackQuickLinkClick, trackAdminAccess } = useAnalytics();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
+  const handleCategoryChange = (categoryId: string, categoryName: string) => {
+    trackCategoryClick(categoryName);
+    onSectionChange(categoryId);
+  };
+
+  const handleQuickLinkClick = (linkName: string) => {
+    trackQuickLinkClick(linkName);
+  };
+
   const handleAdminClick = () => {
+    trackAdminAccess(isAdmin);
     if (isAdmin) {
       onOpenAdmin?.();
     } else {
@@ -46,7 +58,7 @@ const KnowledgeSidebar = ({ activeSection, onSectionChange, onOpenAdmin }: Knowl
           
           {/* Opção "Todos" */}
           <button
-            onClick={() => onSectionChange("all")}
+            onClick={() => handleCategoryChange("all", "Todos os Recursos")}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               activeSection === "all"
@@ -69,7 +81,7 @@ const KnowledgeSidebar = ({ activeSection, onSectionChange, onOpenAdmin }: Knowl
               return (
                 <button
                   key={categoria.id}
-                  onClick={() => onSectionChange(categoria.id)}
+                  onClick={() => handleCategoryChange(categoria.id, categoria.nome)}
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                     isActive
@@ -94,6 +106,7 @@ const KnowledgeSidebar = ({ activeSection, onSectionChange, onOpenAdmin }: Knowl
               href="https://helpdesk.badesul.com.br/otobo/index.pl"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => handleQuickLinkClick("Abrir Chamado")}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
             >
               <Headphones className="h-4 w-4" />
@@ -103,6 +116,7 @@ const KnowledgeSidebar = ({ activeSection, onSectionChange, onOpenAdmin }: Knowl
               href="https://gemini.google.com/gem/245dfc56d0fa?ts=6971292b"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => handleQuickLinkClick("Assistente IA")}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
             >
               <Bot className="h-4 w-4" />

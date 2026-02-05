@@ -1,6 +1,8 @@
 import { Search } from "lucide-react";
+import { useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { useConfiguracoes } from "@/hooks/usePortalData";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 interface KnowledgeHeaderProps {
   searchQuery: string;
@@ -9,12 +11,29 @@ interface KnowledgeHeaderProps {
 
 const KnowledgeHeader = ({ searchQuery, onSearchChange }: KnowledgeHeaderProps) => {
   const { data: config } = useConfiguracoes();
+  const { trackSearch } = useAnalytics();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   
   // Usar configurações do banco ou valores padrão
   const corPrimaria = config?.corPrimaria || '#1e3a5f';
   const corSecundaria = config?.corSecundaria || '#2e7d32';
   const titulo = config?.tituloHeader || 'Banco de Conhecimento';
   const subtitulo = config?.subtituloHeader || 'Badesul - Portal de Manuais e Procedimentos';
+
+  const handleSearchChange = useCallback((value: string) => {
+    onSearchChange(value);
+    
+    // Debounce para evitar excesso de eventos
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    if (value.trim().length >= 3) {
+      debounceRef.current = setTimeout(() => {
+        trackSearch(value.trim());
+      }, 1000);
+    }
+  }, [onSearchChange, trackSearch]);
 
   return (
     <header 
@@ -40,7 +59,7 @@ const KnowledgeHeader = ({ searchQuery, onSearchChange }: KnowledgeHeaderProps) 
               type="text"
               placeholder="Buscar manuais, procedimentos..."
               value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 bg-white/95 border-0 text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-white/50"
             />
           </div>

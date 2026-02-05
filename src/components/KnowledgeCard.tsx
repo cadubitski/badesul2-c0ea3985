@@ -3,6 +3,7 @@ import { ExternalLink, HelpCircle, Bot, Headphones, Monitor, FileText, BookOpen,
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useConfiguracoes } from "@/hooks/usePortalData";
 import { getIconComponent } from "@/components/IconPicker";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 interface KnowledgeCardProps {
   title: string;
@@ -17,6 +18,7 @@ interface KnowledgeCardProps {
 const KnowledgeCard = ({ title, description, iconName, href, categoryId, itemId, tipo }: KnowledgeCardProps) => {
   const { data: config } = useConfiguracoes();
   const navigate = useNavigate();
+  const { trackCardClick } = useAnalytics();
   const Icon = getIconComponent(iconName);
   
   // Usar cores do banco para os cards
@@ -27,6 +29,9 @@ const KnowledgeCard = ({ title, description, iconName, href, categoryId, itemId,
   const isFirstCategory = categoryId === 'manuais' || categoryId.includes('manuais');
 
   const handleClick = (e: React.MouseEvent) => {
+    // Rastrear clique no GA
+    trackCardClick(title, categoryId, tipo);
+    
     // Se for do tipo dashboard, abrir página interna
     if (tipo === 'dashboard') {
       e.preventDefault();

@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, Loader2, BarChart3, PieChartIcon, RefreshCw } from "lucide-react";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import {
   BarChart,
   Bar,
@@ -214,6 +215,7 @@ const parseInstructions = (instructions: string | null, allSheets: string[]): Pa
 const DashboardViewer = () => {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
+  const { trackDashboardView, trackChartClick } = useAnalytics();
   const [item, setItem] = useState<ItemRotina | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -263,6 +265,13 @@ const DashboardViewer = () => {
     };
     loadData();
   }, [fetchData]);
+
+  // Rastrear visualização do dashboard quando item carregar
+  useEffect(() => {
+    if (item?.nome) {
+      trackDashboardView(item.nome);
+    }
+  }, [item?.nome, trackDashboardView]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -364,6 +373,10 @@ const DashboardViewer = () => {
   }, [dashboardData, parsedInstructions]);
 
   const handleChartClick = (data: { name: string; count: number; items: DashboardData[] }, groupName: string) => {
+    // Rastrear clique no gráfico
+    if (item?.nome) {
+      trackChartClick(item.nome, groupName, data.name);
+    }
     setDrilldownTitle(`${groupName} - ${data.name} (${data.count} itens)`);
     setDrilldownData(data.items);
   };
